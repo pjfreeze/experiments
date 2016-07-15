@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Calculator</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+    <style type="text/css">
+        .calculator {
+            background: #f3f5f5;
+            margin: 0 auto;
+            max-width: 376px;
+            padding: 16px;
+        }
+
+        .calculator-display {
+            font-family: monospace;
+            font-size: 18px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>&mdash; Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'Calculator'
+
+
+        // Model
+        const model = {
+            action: '',
+            done: false,
+            input: '',
+            started: false,
+            value: 0
+        }
+
+        const OPERATORS = {
+            add: true,
+            divide: true,
+            equals: true,
+            multiply: true,
+            subtract: true
+        }
+
+        model.present = function(intent, data) {
+            if (intent === 'input') {
+                model.started = true
+                model.input += data
+            }
+
+            if (intent in OPERATORS) {
+                if (model.action === '') model.value = parseFloat(model.input)
+                else if (model.action === 'add') model.value += parseFloat(model.input)
+                else if (model.action === 'divide') model.value /= parseFloat(model.input)
+                else if (model.action === 'multiply') model.value *= parseFloat(model.input)
+                else if (model.action === 'subtract') model.value -= parseFloat(model.input)
+            }
+
+            if (intent in OPERATORS) {
+                model.action = intent
+                model.input = ''
+            }
+
+            if (model.action === 'equals') model.done = true
+
+            if (intent === 'clear') {
+                model.action = ''
+                model.done = false
+                model.input = ''
+                model.started = false
+                model.value = 0
+            }
+
+            state._render(model)
+        }
+
+
+        // Views
+        const view = { }
+
+        view.calculator = function(model) {
+            var value = model.done ? model.value : (model.input || (model.started ? '' : '0'))
+            return (
+                '<form class="calculator">' +
+                    '<fieldset>' +
+                        '<input type="text" class="calculator-display" name="value" value="' + value + '" readonly>' +
+                        '<hr>' +
+                        '<div class="input-group">' +
+                            '<button type="button" class="button" data-action="clear">Clear</button>' +
+                            '<a type="button" class="button">&nbsp;</a>' +
+                            '<a type="button" class="button">&nbsp;</a>' +
+                            '<button type="button" title="Divide" class="button" data-action="divide">&divide;</button>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="button" class="button" data-action="input" data-value="7">7</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="8">8</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="9">9</button>' +
+                            '<button type="button" title="Multiply" class="button" data-action="multiply">&times;</button>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="button" class="button" data-action="input" data-value="4">4</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="5">5</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="6">6</button>' +
+                            '<button type="button" title="Subtract" class="button" data-action="subtract">-</button>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="button" class="button" data-action="input" data-value="1">1</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="2">2</button>' +
+                            '<button type="button" class="button" data-action="input" data-value="3">3</button>' +
+                            '<button type="button" title="Add" class="button" data-action="add">+</button>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="button" class="button" data-action="input" data-value="0">0</button>' +
+                            '<button type="button" class="button" data-action="input" data-value=".">.</button>' +
+                            '<a type="button" class="button">&nbsp;</a>' +
+                            '<button type="button" title="Equals" class="button" data-action="equals">=</button>' +
+                        '</div>' +
+                    '</fieldset' +
+                '</form>'
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            representation = view.calculator(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function (model) {
+            // Pass
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.add = function() {
+            model.present('add')
+        }
+
+        action.clear = function() {
+            model.present('clear')
+        }
+
+        action.divide = function() {
+            model.present('divide')
+        }
+
+        action.equals = function() {
+            model.present('equals')
+        }
+
+        action.input = function(dataset) {
+            model.present('input', dataset.value)
+        }
+
+        action.multiply = function() {
+            model.present('multiply')
+        }
+
+        action.subtract = function() {
+            model.present('subtract')
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application by checking for previously saved
+        // application states and using it as a starting point
+        model.present()
+    })()
+    </script>
+</body>
+</html> 

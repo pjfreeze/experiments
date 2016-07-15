@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TODO</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+    <style type="text/css">
+        .todo-complete label {
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>&mdash; Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'TODO'
+
+        // Model
+        const model = {
+            draft: null,
+            todos: { },
+            viewing: 'all'
+        }
+
+        var getRandomAlphaNumeric = function() {
+          function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+              .toString(16)
+              .substring(1)
+          }
+          return s4() + s4()
+        }
+
+        model.present = function(data) {
+            if (data.initialize) Object.assign(model, data)
+
+            if (data.viewing) model.viewing = data.viewing
+
+            if (data.add) model.draft = data.add
+            if (model.draft && model.draft.task) {
+                let todo = {
+                    _id: model.draft._id || getRandomAlphaNumeric(),
+                    task: model.draft.task,
+                    complete: model.draft.complete || false
+                }
+                model.todos[todo._id] = todo
+                model.draft = null
+            }
+
+            if (data.complete) model.todos[data.complete].complete = true
+            if (data.incomplete) model.todos[data.incomplete].complete = false
+            if (data.destroy) delete model.todos[data.destroy]
+
+            window.localStorage.setItem(APPLICATION_NAME, JSON.stringify(model))
+            state._render(model)
+        }
+
+
+        // Views
+        const view = { }
+
+        const INVALID_WARNING = (
+            '<p class="error">' +
+                'It would be too easy to cross nothing off the list! Be sure you provide a description for your task!' +
+            '</p>'
+        )
+
+        const partial = { }
+
+        partial.add = function(model) {
+            return (
+                '<h1>TODO</h1>' +
+                '<form data-action="add">' +
+                    '<fieldset>' +
+                        '<legend>Add a new task</legend>' +
+                        (state.invalid(model) ? INVALID_WARNING : '') +
+                        '<div class="input-group">' +
+                            '<label for="todo">Describe your task</label><br>' +
+                            '<input type="text" id="todo" name="task">' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">Add task</button>' +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        partial.filters = function(model) {
+            var options = ['all', 'complete', 'incomplete']
+            var filters = options.map(
+                function(filter) {
+                    var classes = (model.viewing === filter ? 'button' : 'button button-link')
+                    return '<button type="button" class="' + classes + '" data-action="view" data-viewing="' + filter + '">' + filter +'</button>'
+                }
+            )
+            return (
+                '<form>' + 
+                    filters.join('') +
+                '</form>' +
+                '<hr>'
+            )
+        }
+
+        partial.tasks = function(model, completed) {
+            var todos = Object.keys(model.todos).map(
+                function(_id) {
+                    return model.todos[_id]
+                }
+            )
+
+            var display = todos
+                .filter(
+                    function(todo) {
+                        return completed === undefined || todo.complete === completed
+                    }
+                )
+                .map(
+                    function(todo) {
+                        return (
+                            '<li id="todo-' + todo._id + '" class="todo-' + (todo.complete ? 'complete' : 'incomplete') + '">' +
+                                '<form>' +
+                                    '<input type="checkbox" id="todo-status-' + todo._id + '" ' +
+                                        (todo.complete ? 'checked="true" ' : '') +
+                                        'data-action="' + (todo.complete ? 'incomplete' : 'complete') + '" data-on="click" data-todo="' + todo._id + '">' +
+                                    '<label for="todo-status-' + todo._id + '">' + todo.task + '</label>' +
+                                '</form>' +
+                                '<button type="button" data-action="destroy" data-todo="' + todo._id + '">Delete</button>' +
+                            '</li>'
+                        )
+                    }
+                )
+
+            return display.join('')
+        }
+
+        view.all = function(model) {
+            return (
+                partial.add(model) +
+                '<hr>' +
+                '<h2>Your tasks</h2>' +
+                partial.filters(model) +
+                '<ul>' +
+                    partial.tasks(model) +
+                '</ul>'
+            )
+        }
+
+        view.complete = function(model) {
+            return (
+                partial.add(model) +
+                '<hr>' +
+                '<h2>Your tasks</h2>' +
+                partial.filters(model) +
+                '<ul>' +
+                    partial.tasks(model, true) +
+                '</ul>'
+            )
+        }
+
+        view.incomplete = function(model) {
+            return (
+                partial.add(model) +
+                '<hr>' +
+                '<h2>Your tasks</h2>' +
+                partial.filters(model) +
+                '<ul>' +
+                    partial.tasks(model, false) +
+                '</ul>'
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        // Available application states
+        state.invalid = function(model) {
+            return (model.draft && !model.draft.task)
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            if (model.viewing === 'all') representation = view.all(model)
+            if (model.viewing === 'complete') representation = view.complete(model)
+            if (model.viewing === 'incomplete') representation = view.incomplete(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function (model) {
+            document.getElementById('todo').focus()
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.add = function(form) {
+            var data = {
+                add: {
+                    task: form.task && form.task.value,
+                    complete: false
+                }
+            }
+
+            model.present(data)
+        }
+
+        action.complete = function(dataset) {
+            var data = {
+                complete: dataset.todo
+            }
+
+            model.present(data)
+        }
+
+        action.destroy = function(dataset) {
+            var data = {
+                destroy: dataset.todo
+            }
+
+            model.present(data)
+        }
+
+        action.incomplete = function(dataset) {
+            var data = {
+                incomplete: dataset.todo
+            }
+
+            model.present(data)
+        }
+
+        action.view = function(dataset) {
+            var data = {
+                viewing: dataset.viewing
+            }
+
+            model.present(data)
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application by checking for previously saved
+        // application states and using it as a starting point
+        var previousState = window.localStorage.getItem(APPLICATION_NAME) || '{}'
+        var data = window.JSON.parse(previousState)
+        data.initialize = true
+        model.present(data)
+    })()
+    </script>
+</body>
+</html> 

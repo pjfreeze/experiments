@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Input: Date</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            svg {
+                fill: currentColor;
+            }
+
+            body {
+                color: #333;
+            }
+
+            .input-group {
+                position: relative;
+                width: 250px;
+            }
+
+            #autocomplete {
+                border: 2px solid #ddd;
+                border-radius: 2px;
+                font-size: 16px;
+                height: 32px;
+                padding: 6px 8px;
+                width: 100%;
+            }
+
+            #pick-a-date {
+                background-color: transparent;
+                border: 0;
+                color: #333;
+                cursor: pointer;
+                font-size: 0;
+                margin: 0;
+                padding: 0;
+                position: absolute;
+                right: 4px;
+                top: 4px;
+            }
+
+            #pick-a-date:hover {
+                color: #555;
+            }
+
+            .month {
+                font-size: 13px;
+                margin: 4px 0;
+                text-align: center;
+            }
+
+            .calendar {
+                background: #f4f4f4;
+                color: #333;
+                font-family: Arial;
+                font-size: 12px;
+                padding: 8px;
+                position: absolute;
+                width: 250px;
+            }
+            .calendar-month-previous,
+            .calendar-month-next {
+                background: transparent;
+                border: 0;
+                height: 24px;
+                left: 13px;
+                margin: 0;
+                padding: 0;
+                position: absolute;
+                top: 5px;
+                width: 24px;
+            }
+
+            .calendar-month-next {
+                left: auto;
+                right: 13px;
+            }
+
+            .calendar-month {
+                border-collapse: collapse;
+                border-spacing: 0;
+                margin: 5px;
+            }
+            .calendar-head {
+                font-size: 12px;
+                height: 32px;
+            }
+
+            .calendar-head .calendar-day {
+                background: #e7e7e7;
+            }
+
+            .calendar-day {
+                height: 32px;
+                font-size: 11px;
+                margin: 0;
+                overflow: hidden;
+                padding: 0;
+                text-align: center;
+                position: relative;
+                width: 32px;
+            }
+
+            .calendar-day button {
+                background: transparent;
+                border: 0;
+                color: inherit;
+                cursor: pointer;
+                font-size: inherit;
+                height: 100%;
+                padding: 0;
+                width: 100%;
+            }
+
+            .calendar-day button:hover {
+                background: #86cbde;
+            }
+
+            .calendar-today:before {
+                content: '';
+                display: block;
+                position: absolute;
+                height: 0;
+                width: 0;
+                font-size: 0;
+                top: -6px;
+                border: 6px solid transparent;
+                border-right-color: #0e92b7;
+                left: -6px;
+                transform: rotate(45deg);
+            }
+
+            .calendar-selected {
+                background: #0e92b7;
+                color: #fff;
+            }
+
+            .calendar-inactive {
+                color: #999;
+            }
+
+            .calendar-inactive button:hover {
+                background: #ddd;
+            }
+
+            .calendar-inactive.calendar-selected {
+                background: #86cbde;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Input: Date</h1>
+        <form>
+            <fieldset>
+                <legend>Click on the calendar icon to open a date picker</legend>
+                <label for="search-for-a-date">Select a date</label>
+                <div class="input-group">
+                    <input id="autocomplete"
+                        type="text"
+                        placeholder="e.g. Next Sunday">
+                    <button id="pick-a-date"
+                        type="button">
+                        <svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                        </svg>
+                    </button>
+                </div>
+            </fieldset>
+        </form>
+        <script>
+            (function() {
+                const INPUT = document.getElementById('autocomplete')
+                const BUTTON = document.getElementById('pick-a-date')
+
+                var toggleOpen = function(event) {
+                    var container = document.createElement('div')
+                    container.innerHTML = getCalendarHtml(INPUT.value)
+                    INPUT.parentElement.appendChild(container)
+
+                    registerCalendarEvents()
+
+                    BUTTON.removeEventListener('click', toggleOpen)
+                    BUTTON.addEventListener('click', toggleClose)
+                }
+                var toggleClose = function(event) {
+                    BUTTON.removeEventListener('click', toggleClose)
+                    BUTTON.addEventListener('click', toggleOpen)
+                    var parent = document.getElementById('autocomplete').parentElement
+                    parent.removeChild(parent.children[parent.children.length - 1])
+                }
+
+                BUTTON.addEventListener(
+                    'click',
+                    toggleOpen
+                )
+
+                var setCalendar = function(selected, view) {
+                    var calendar = document.getElementById('calendar')
+                    calendar.outerHTML = getCalendarHtml(selected, view)
+                    registerCalendarEvents()
+                }
+
+                var registerCalendarEvents = function() {
+                    var calendar = document.getElementById('calendar')
+                    calendar.addEventListener(
+                        'click',
+                        function(event) {
+                            if (!(event.target.dataset && !!event.target.dataset.date)) return
+
+                            INPUT.value = event.target.dataset.date
+                            INPUT.parentElement.removeChild(INPUT.parentElement.children[INPUT.parentElement.children.length - 1])
+                            BUTTON.removeEventListener('click', toggleClose)
+                            BUTTON.addEventListener('click', toggleOpen)
+                        }
+                    )
+
+                    var next = document.querySelector('.calendar-month-next')
+                    next.addEventListener(
+                        'click',
+                        function(event) {
+                            var calendar = document.getElementById('calendar')
+                            var date = new Date(calendar.dataset.calendarView)
+                            date.setMonth(date.getMonth() + 1)
+                            setCalendar(INPUT.value, date)
+                        }
+                    )
+                    var previous = document.querySelector('.calendar-month-previous')
+                    previous.addEventListener(
+                        'click',
+                        function(event) {
+                            var calendar = document.getElementById('calendar')
+                            var date = new Date(calendar.dataset.calendarView)
+                            date.setMonth(date.getMonth() - 1)
+                            setCalendar(INPUT.value, date)
+                        }
+                    )
+                }
+
+                const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                function getCalendarHtml(selected, view) {
+                    var start = view || selected || new Date()
+                    start = new Date(start)
+                    var month = start.getMonth()
+
+                    var days = getCalendarMonth(selected, start)
+                    return (
+                        '<div id="calendar" class="calendar" data-calendar-view="' + getYMD(start) + '">' +
+                        '<div>' +
+                            '<button class="calendar-month-change calendar-month-previous" type="button" data-calendar-month-change="-1">' +
+                                '<svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">' +
+                                    '<path d="M15.41 16.09l-4.58-4.59 4.58-4.59L14 5.5l-6 6 6 6z"/>' +
+                                    '<path d="M0-.5h24v24H0z" fill="none"/>' +
+                                '</svg>' +
+                            '</button>' +
+                            '<h6 class="month">' + MONTHS[start.getMonth()] + ' <span class="calendar-year">' + start.getFullYear() + '</span></h6>' +
+                            '<button class="calendar-month-change calendar-month-next" type="button"data-calendar-month-change="1">' +
+                                '<svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">' +
+                                    '<path d="M8.59 16.34l4.58-4.59-4.58-4.59L10 5.75l6 6-6 6z"/>' +
+                                    '<path d="M0-.25h24v24H0z" fill="none"/>' +
+                                '</svg>' +
+                            '</button>' +
+                        '</div>' +
+                        '<table class="calendar-month">' +
+                            '<thead class="calendar-head">' +
+                                '<tr>' +
+                                    '<th class="calendar-day" title="Sunday">SU</th>' +
+                                    '<th class="calendar-day" title="Monday">MO</th>' +
+                                    '<th class="calendar-day" title="Tuesday">TU</th>' +
+                                    '<th class="calendar-day" title="Wednesday">WE</th>' +
+                                    '<th class="calendar-day" title="Thursday">TH</th>' +
+                                    '<th class="calendar-day" title="Friday">FR</th>' +
+                                    '<th class="calendar-day" title="Saturday">SA</th>' +
+                                '</tr>' +
+                            '</thead>' +
+                            '<tbody>' +
+                                days.join('') +
+                            '</tbody>' +
+                        '</table>' +
+                        '</div>'
+                    )
+                }
+
+                function getCalendarMonth(selected, view) {
+                    selected = new Date(selected)
+                    var viewCopy = new Date(view)
+                    var month = viewCopy.getMonth()
+                    var weeks = []
+                    viewCopy.setDate(1)
+                    viewCopy.setMonth(month)
+                    while (viewCopy.getMonth() === month) {
+                        weeks.push('<tr class="calendar-week">' + getCalendarWeek(viewCopy, selected) + '</tr>')
+                        viewCopy.setDate(viewCopy.getDate() + 7)
+                    }
+                    return weeks
+                }
+
+                function getCalendarWeek(date, value) {
+                    var copy = new Date(date)
+                    var offset = copy.getDay()
+                    var month = copy.getMonth()
+                    var days = []
+                    for (var day = 0; day < 7; day += 1) {
+                        var date = new Date(copy)
+                        date.setDate(date.getDate() + day - offset)
+                        var today = new Date()
+                        var isToday = isSameDate(today, date)
+                        var classes = isToday ? ['calendar-day', 'calendar-today'] : ['calendar-day']
+                        if (date.getMonth() !== month) {
+                            classes.push('calendar-inactive')
+                        }
+                        if (isSameDate(date, value)) {
+                            classes.push('calendar-selected')
+                        }
+                        days.push('<td class="' + classes.join(' ') + '"><button type="button" title="' + getYMD(date) + '" data-date="' + getYMD(date) + '">' + date.getDate() + '</button></td>')
+                    }
+                    return days.join('')
+                }
+
+                function getYMD(date) {
+                    let pad = function(digit) {
+                        return digit > 9 ? digit : ('0' + digit)
+                    }
+
+                    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                }
+
+                function isSameDate(date1, date2) {
+                    date1 = new Date(date1)
+                    date2 = new Date(date2)
+
+                    return !!(date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear())
+                }
+            })();
+        </script>
+    </body>
+</html>

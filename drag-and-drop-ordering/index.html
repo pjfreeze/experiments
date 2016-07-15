@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            ul {
+                padding: 0;
+                margin: 0;
+            }
+
+            ul li {
+                display: block;
+                list-style: none;
+                padding: 16px;
+                margin-top: 8px;
+                background: #f4f5f5;
+            }
+
+            .item {
+                cursor: move;
+                position: relative;
+            }
+
+            .item.source {
+                opacity: .4;
+            }
+
+            .item.over-after {
+                margin-bottom: 66px;
+            }
+
+            .item.over-after:after {
+                content: 'Drop here';
+                height: 50px;
+                box-sizing: border-box;
+                width: 100%;
+                display: block;
+                background: #f8f8f8;
+                color: #555;
+                border: 2px dashed #ccc;
+                position: absolute;
+                bottom: -58px;
+                left: 0;
+                text-align: center;
+                padding: 16px;
+            }
+
+            .item.over-before {
+                margin-top: 66px;
+            }
+
+            .item.over-before:before {
+                content: 'Drop here';
+                height: 50px;
+                box-sizing: border-box;
+                width: 100%;
+                display: block;
+                background: #f8f8f8;
+                color: #555;
+                border: 2px dashed #ccc;
+                position: absolute;
+                top: -58px;
+                left: 0;
+                text-align: center;
+                padding: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Drag and drop ordering </h1>
+        <ul id="list">
+            <li draggable="true" class="item">Chicken</li>
+            <li draggable="true" class="item">Apples</li>
+            <li draggable="true" class="item">Cheese</li>
+            <li draggable="true" class="item">Chips</li>
+            <li draggable="true" class="item">Onions</li>
+        </ul>
+        <script>
+            (function() {
+                var source = null
+                var items = []
+                var before = 'over-before'
+                var after = 'over-after'
+
+                var dragstart = function(event) {
+                    source = this
+
+                    this.classList.add('source')
+                }
+
+                var dragleave = function(event) {
+                    this.classList.remove(after, before)
+                }
+
+                var dragover = function(event) {
+                    event.preventDefault()
+
+                    var height = event.target.clientHeight
+                    var offset = event.target.offsetTop
+                    var y = event.y
+
+                    var position = (y - offset) > (height / 2) ? after : before
+
+                    if (source !== this) {
+                        if (this.classList.contains(position)) {
+                            return
+                        }
+                        this.classList.remove(after, before)
+                        this.classList.add(position)
+                    }
+                }
+
+                var drop = function(event) {
+                    event.stopPropagation()
+
+                    var parent = this.parentElement
+                    var isBefore = this.classList.contains(before)
+                    var isNotLast = !!this.nextSibling
+
+                    if (source !== this) {
+                        parent.removeChild(source)
+                        source.style.opacity = '1'
+                        if (isBefore) {
+                            parent.insertBefore(source, this)
+                        } else if (isNotLast) {
+                            parent.insertBefore(source, this.nextSibling)
+                        } else {
+                            parent.appendChild(source)
+                        }
+
+                        dragend(event)
+                    }
+                }
+
+                var dragend = function(event) {
+                    source = null
+                    register()
+                    Array.prototype.forEach.call(
+                        items,
+                        function(element) {
+                                     element.classList.remove(after, before, 'source')
+                        }
+                    )
+                }
+
+
+                var register = function() {
+                    items = document.querySelectorAll('.item')
+                    Array.prototype.forEach.call(
+                        items,
+                        function(element) {
+                            element.addEventListener('dragstart', dragstart)
+                            element.addEventListener('dragleave', dragleave)
+                            element.addEventListener('dragover', dragover)
+                            element.addEventListener('drop', drop)
+                            element.addEventListener('dragend', dragend)
+                        }
+                    )
+                }
+
+                register()
+            })();
+        </script>
+    </body>
+</html>

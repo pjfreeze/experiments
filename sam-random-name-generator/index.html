@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Random Name Generator</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>&mdash; Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'Random Name Generator'
+
+        // Model
+        const model = {
+            adjectives: [ 'abandoned', 'aberrant', 'accidentally', 'aggressive', 'aimless', 'alien', 'angry', 'appropriate', 'barbaric', 'beacon', 'big', 'bitter', 'bleeding', 'brave', 'brutal', 'cheerful', 'dancing', 'dangerous', 'dead', 'deserted', 'digital', 'dirty', 'disappointed', 'discarded', 'dreaded', 'eastern', 'eastern', 'elastic', 'empty', 'endless', 'essential', 'eternal', 'everyday', 'fierce', 'flaming', 'flying', 'forgotten', 'forsaken', 'freaky', 'frozen', 'full', 'furious', 'ghastly', 'global', 'gloomy', 'grim', 'gruesome', 'gutsy', 'helpless', 'hidden', 'hideous', 'homeless', 'hungry', 'insane', 'intense', 'intensive', 'itchy', 'liquid', 'lone', 'lost', 'meaningful', 'modern', 'monday\'s', 'morbid', 'moving', 'needless', 'nervous', 'new', 'next', 'ninth', 'nocturnal', 'northernmost', 'official', 'old', 'permanent', 'persistent', 'pointless', 'pure', 'quality', 'random', 'rare', 'raw', 'reborn', 'remote', 'restless', 'rich', 'risky', 'rocky', 'rough', 'running', 'rusty', 'sad', 'saturday\'s', 'screaming', 'serious', 'severe', 'silly', 'skilled', 'sleepy', 'sliding', 'small', 'solid', 'steamy', 'stony', 'stormy', 'straw', 'strawberry', 'streaming', 'strong', 'subtle', 'supersonic', 'surreal', 'tainted', 'temporary', 'third', 'tidy', 'timely', 'unique', 'vital', 'western', 'wild', 'wooden', 'worthy', 'bitter', 'boiling', 'brave', 'cloudy', 'cold', 'confidential', 'dreadful', 'dusty', 'eager', 'early', 'grotesque ', 'harsh', 'heavy', 'hollow', 'hot', 'husky', 'icy', 'late', 'lonesome', 'long', 'lucky', 'massive', 'maximum', 'minimum', 'mysterious', 'outstanding', 'rapid', 'rebel', 'scattered', 'shiny', 'solid', 'square', 'steady', 'steep', 'sticky', 'stormy', 'strong', 'sunday\'s', 'swift', 'tasty' ],
+            colors: [ 'white', 'black', 'yellow', 'red', 'blue', 'brown', 'green', 'purple', 'orange', 'silver', 'scarlet', 'rainbow', 'indigo', 'ivory', 'navy', 'olive', 'teal', 'pink', 'magenta', 'maroon', 'sienna', 'gold', 'golden' ],
+            names: [ ],
+            nouns: [ 'alarm', 'albatross', 'anaconda', 'antique', 'artificial', 'autopsy', 'autumn', 'avenue', 'backpack', 'balcony', 'barbershop', 'boomerang', 'bulldozer', 'butter', 'canal', 'cloud', 'clown', 'coffin', 'comic', 'compass', 'cosmic', 'crayon', 'creek', 'crossbow', 'dagger', 'dinosaur', 'dog', 'donut', 'door', 'doorstop', 'electrical', 'electron', 'eyelid', 'firecracker', 'fish', 'flag', 'flannel', 'flea', 'frostbite', 'gravel', 'haystack', 'helium', 'kangaroo', 'lantern', 'leather', 'limousine', 'lobster', 'locomotive', 'logbook', 'longitude', 'metaphor', 'microphone', 'monkey', 'moose', 'morning', 'mountain', 'mustard', 'neutron', 'nitrogen', 'notorious', 'obscure', 'ostrich', 'oyster', 'parachute', 'peasant', 'pineapple', 'plastic', 'postal', 'pottery', 'proton', 'puppet', 'railroad', 'rhinestone', 'roadrunner', 'rubber', 'scarecrow', 'scoreboard', 'scorpion', 'shower', 'skunk', 'sound', 'street', 'subdivision', 'summer', 'sunshine', 'tea', 'temple', 'test', 'tire', 'tombstone', 'toothbrush', 'torpedo', 'toupee', 'trendy', 'trombone', 'tuba', 'tuna', 'tungsten', 'vegetable', 'venom', 'vulture', 'waffle', 'warehouse', 'waterbird', 'weather', 'weeknight', 'windshield', 'winter', 'wrench', 'xylophone', 'alpha', 'arm', 'beam', 'beta', 'bird', 'breeze', 'burst', 'cat', 'cobra', 'crystal', 'drill', 'eagle', 'emerald', 'epsilon', 'finger', 'fist', 'foot', 'fox', 'galaxy', 'gamma', 'hammer', 'heart', 'hook', 'hurricane', 'iron', 'jazz', 'jupiter', 'knife', 'lama', 'laser', 'lion', 'mars', 'mercury', 'moon', 'moose', 'neptune', 'omega', 'panther', 'planet', 'pluto', 'plutonium', 'poseidon', 'python', 'ray', 'sapphire', 'scissors', 'screwdriver', 'serpent', 'sledgehammer', 'smoke', 'snake', 'space', 'spider', 'star', 'steel', 'storm', 'sun', 'swallow', 'tiger', 'uranium', 'venus', 'viper', 'wrench', 'yard', 'zeus' ]
+        }
+
+        var _random = function(list1, list2) {
+            list2 = list2 || []
+            var list = list1.concat(list2)
+            var index = Math.floor(Math.random() * list.length)
+            return list[index]
+        }
+
+        model.present = function(intent, data) {
+            if (intent === 'generate') {
+                let prefix = _random(model.adjectives, model.colors)
+                let filler = _random(model.adjectives, model.colors)
+                if (prefix === filler) filler = _random(model.adjectives, fmodel.colors)
+                let suffix = _random(model.nouns)
+                let decision = ((Math.random() * 100))
+                let name = []
+
+                if (decision <= 25) {
+                    name.push(prefix, filler, suffix)
+                } else if (decision <= 90) {
+                    name.push(prefix, suffix)
+                } else {
+                    name.push(suffix, prefix)
+                }
+
+                model.names.push( name.join(' ') )
+            }
+
+            state._render(model)
+        }
+
+
+        // Partials
+        const partial = { }
+
+        partial.names = function(names) {
+            var list = names.map(
+                function(name) {
+                    return '<li>' + name + '</li>'
+                }
+            )
+
+            return (
+                '<ul>' +
+                    list.join('') +
+                '</ul'
+            )
+        }
+
+        // Views
+        const view = { }
+
+        view.ready = function(model) {
+            return (
+                '<form data-action="generate">' +
+                    '<fieldset>' +
+                        '<legend>' + APPLICATION_NAME + '</legend>' +
+                        '<h3>' + (model.names[model.names.length - 1] || '') + '</h3>' +
+                        '<button type="submit" class="button">Generate name</button>' +
+                    '</fieldset>' +
+                '</form>' +
+                '<hr>' +
+                partial.names(model.names)
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        // Available application states
+        state.empty = function(model) {
+            return (model.names && model.names.length === 0)
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+            representation = view.ready(model)
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function (model) {
+            if (state.empty(model)) {
+                action.generate()
+            }
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.generate = function(form) {
+            var intent = 'generate'
+            model.present(intent)
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+        model.present()
+    })()
+    </script>
+</body>
+</html> 

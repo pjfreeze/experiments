@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Context Menu</title>
+        <style>
+            body {
+                position: relative;
+            }
+
+            .complete {
+                text-decoration: line-through;
+            }
+
+            #context {
+                background: #ffffff;
+                box-shadow: 0 0 12px 4px rgba(0, 0, 0, 0.13);
+                list-style: none;
+                margin: 0;
+                padding: 8px;
+                position: absolute;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <ul id="todo">
+                <li>Go to the grocery store</li>
+                <li>Mail a package</li>
+                <li>Cook dinner</li>
+            </ul>
+        </div>
+        <div id="menu"></div>
+        <script>
+            const TODO_LIST = document.getElementById('todo')
+            const CONTAINER = document.getElementById('menu')
+            const MENU_INCOMPLETE = (
+                '<ul id="context" class="menu-context">' +
+                    '<li><button type="button">Mark as complete</button></li>' +
+                '</ul>'
+            )
+
+            const MENU_COMPLETE = (
+                '<ul id="context" class="menu-context">' +
+                    '<li><button type="button">Mark as incomplete</button></li>' +
+                '</ul>'
+            )
+
+            Array.prototype.forEach.call(
+                TODO_LIST.children,
+                function(element) {
+                    element.addEventListener(
+                        'contextmenu',
+                        function(contextEvent) {
+                            event.preventDefault()
+                            if (contextEvent.target.classList.contains('complete')) {
+                                CONTAINER.innerHTML += MENU_COMPLETE
+                            } else {
+                                CONTAINER.innerHTML += MENU_INCOMPLETE
+                            }
+                            const CONTEXT = document.getElementById('context')
+                            CONTEXT.style.top = contextEvent.layerY + 'px'
+                            CONTEXT.style.left = contextEvent.layerX + 'px'
+                            CONTEXT.querySelector('button').addEventListener(
+                                'click',
+                                function(buttonEvent) {
+                                    contextEvent.target.classList.toggle('complete')
+                                    CONTEXT.parentElement.removeChild(CONTEXT)
+                                }
+                            )
+                            document.addEventListener(
+                                'click',
+                                function() {
+                                    CONTEXT.parentElement.removeChild(CONTEXT)
+                                }
+                            )
+                        }
+                    )
+                }
+            )
+        </script>
+    </body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rocket Launch</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>- Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'Rocket Launch'
+        const COUNTER_MAX = 10
+
+        // Model
+        const model = {
+            aborted: false,
+            counter: COUNTER_MAX, 
+            launched: false, 
+            started: false      
+        }
+
+        model.present = function(data) {
+            if (data.initialize) Object.assign(model, data)
+
+            if (state.counting(model)) {
+                if (model.counter === 0) {
+                    model.launched = data.launched || false
+                } else {
+                    model.aborted = data.aborted || false
+                    if (data.counter !== undefined) model.counter = data.counter
+                }
+            } else {
+                if (state.ready(model)) {
+                    model.started = data.started || false
+                }
+            }
+
+            if (data.reset) {
+                model.aborted = false
+                model.counter = COUNTER_MAX
+                model.launched = false
+                model.started = false
+            }
+
+            window.localStorage.setItem(APPLICATION_NAME, JSON.stringify(model))
+            state._render(model)
+        }
+
+
+        // Views
+        const view = { }
+
+        view.ready = function(model) {
+            return (
+                '<form data-action="start">' +
+                    '<fieldset>' +
+                        '<legend>Rocket Launch</legend>' +
+                        '<p>Countdown: ' + model.counter + ' seconds</p>' +
+                        '<button type="submit" class="button">Start countdown</button>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.counting = function(model) {
+            return (
+                 '<form data-action="abort">' +
+                    '<fieldset>' +
+                        '<legend>Rocket Launch</legend>' +
+                        '<p>Countdown: ' + model.counter + ' seconds</p>' +
+                        '<button type="submit" class="button">Abort countdown!</button>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.aborted = function(model) {
+            return (
+                '<form data-action="reset">' +
+                    '<fieldset>' +
+                        '<legend>Rocket Launch</legend>' +
+                        '<p>Aborted at: ' + model.counter + ' seconds</p>' +
+                        '<button type="submit" class="button">Reset countdown</button>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.launched = function(model) {
+            return (
+                '<form data-action="reset">' +
+                    '<fieldset>' +
+                        '<legend>Rocket Launch</legend>' +
+                        '<p>Launched!</p>' +
+                        '<button type="submit" class="button">Reset countdown</button>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        // Available application states
+        state.aborted = function(model) {
+            return ((model.counter <= COUNTER_MAX) && (model.counter >= 0) && model.started && !model.launched && model.aborted)
+        }
+
+        state.counting = function(model) {
+            return ((model.counter <= COUNTER_MAX) && (model.counter >= 0) && model.started && !model.launched && !model.aborted)
+        }
+
+        state.launched = function(model) {
+            return ((model.counter === 0) && model.started && model.launched && !model.aborted)
+        }
+
+        state.ready = function(model) {
+            return ((model.counter === COUNTER_MAX) && !model.started && !model.launched && !model.aborted)
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            if (state.aborted(model)) representation = view.aborted(model)
+            if (state.counting(model)) representation = view.counting(model)
+            if (state.launched(model)) representation = view.launched(model)
+            if (state.ready(model)) representation = view.ready(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function (model) {
+            if (state.counting(model)) {
+                if (model.counter > 0) {
+                    action.decrement({ counter: model.counter })
+                }
+
+                if (model.counter === 0) {
+                    action.launch()
+                }
+            }
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.start = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            data.started = true
+            present(data)
+        }
+
+        action.decrement = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            data.counter = data.counter || COUNTER_MAX
+            window.setTimeout(
+                function() {
+                    data.counter -= 1
+                    present(data)
+                },
+                1000
+            )
+        }
+
+        action.launch = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            data.launched = true
+            present(data)
+        }
+
+        action.abort = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            data.aborted = true
+            present(data)
+        }
+
+        action.reset = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            data.reset = true
+            present(data)
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application by checking for previously saved
+        // application states and using it as a starting point
+        var previousState = window.localStorage.getItem(APPLICATION_NAME) || '{}'
+        var data = window.JSON.parse(previousState)
+        data.initialize = true
+        model.present(data)
+    })()
+    </script>
+</body>
+</html> 

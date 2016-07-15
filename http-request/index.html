@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HTTP Requests</title>
+    </head>
+    <body>
+        <script type="text/javascript">
+            const ACCEPTED_STATUSES = {
+                '200': 'OK',
+                '301': 'Moved Permanently',
+                '302': 'Found',
+                '303': 'See Other'
+            }
+
+            const PROCESS_BY_TYPE = {
+                'application/json': function(response) {
+                    var parsed = null
+                    try {
+                        parsed = JSON.parse(response)
+                    } catch (error) {
+                        parsed = response
+                    }
+                    return parsed
+                }
+            }
+            var _request = function(method, url, callback) {
+                var httpRequest = new XMLHttpRequest()
+                httpRequest.addEventListener(
+                    'load',
+                    function() {
+                        if (httpRequest.status in ACCEPTED_STATUSES) {
+                            var type = httpRequest.getResponseHeader('Content-type')
+                            var processed = PROCESS_BY_TYPE[type](httpRequest.responseText)
+                            callback(null, processed, httpRequest.status)
+                        } else {
+                            callback(httpRequest.responseText, null, httpRequest.status)
+                        }
+                    }
+                )
+
+                httpRequest.addEventListener(
+                    'error',
+                    function() {
+                        callback(httpRequest.responseText, null, httpRequest.status)
+                    }
+                )
+
+                httpRequest.open(method, url, true)
+                httpRequest.send()
+            }
+
+            var request = window.request = function(url, callback) {
+                _request('get', url, callback)
+            }
+
+            request.get = request
+            request.post = function(url, callback) {
+                _request('post', url, callback)
+            }
+
+            request.get(
+                '/example.json',
+                function(error, response, status) {
+                    console.log(error)
+                    console.log(response)
+                    console.log(status)
+                }
+            )
+        </script>
+    </body>
+</html>

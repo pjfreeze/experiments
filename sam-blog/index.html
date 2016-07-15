@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blog</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>- Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        // Application frame element
+        const $APPLICATION = document.getElementById('application')
+
+        const POST = {
+            _id: '',
+            title: '',
+            content: ''
+        }
+
+        // Model
+        const model = {
+            drafting: false,
+            editing: false,
+            posts: {}
+        }
+
+        var getPostId = function() {
+          function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+              .toString(16)
+              .substring(1)
+          }
+          return s4() + s4()
+        }
+
+        model.present = function(data) {
+            if (data.initialize) Object.assign(model, data)
+
+            if (data.display) {
+                model.draft = null
+                model.drafting = false
+                model.edit = null
+                model.editing = false
+            }
+
+            if (data.drafting) model.drafting = true
+            if (data.publish) model.draft = data.publish
+
+            if (data.publish && data.publish.title && data.publish.content) {
+                let post = Object.assign({}, data.publish)
+                post._id = getPostId()
+                model.posts[post._id] = post
+                model.drafting = false
+            }
+
+            if (data.edit) {
+                model.editing = true
+                model.edit = model.posts[data.edit]
+            }
+            if (data.update) model.edit = data.update
+
+            if (data.update && data.update.title && data.update.content) {
+                model.editing = false
+                model.posts[data.update._id] = data.update
+            }
+
+            if (data.destroy) {
+                delete model.posts[data.destroy]
+            }
+
+            window.localStorage.setItem('blog-posts', JSON.stringify(model))
+            state._render(model)
+        }
+
+
+        const BACK_TO_POSTS = (
+            '<button type="button" class="button button-link" data-action="posts">Back to posts</button>'
+        ) 
+
+        // Views
+        const view = { }
+
+        const INVALID_WARNING = (
+            '<p class="error">' +
+                'Both &ldquo;Post title&rdquo; and &ldquo;Post content&rdquo; are required' +
+            '</p>'
+        )
+        view.drafting = function(model) {
+            var draft = model.draft || Object.assign({}, POST)
+            return (
+                '<form data-action="publish">' +
+                    '<fieldset>' +
+                        '<legend>New Post</legend>' +
+                        (state.invalid(model) ? INVALID_WARNING : '') +
+                        '<div class="input-group">' +
+                            '<label for="post-title">Post title</label><br>' +
+                            '<input id="post-title" type="text" name="title" value="' + draft.title + '">' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<label for="post-content">Post content</label><br>' +
+                            '<textarea id="post-content" name="content">' + draft.content + '</textarea>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">Publish post</button>' +
+                            (state.empty(model) ? '' : BACK_TO_POSTS) +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.editing = function(model) {
+            return (
+                '<form data-action="update">' +
+                    '<fieldset>' +
+                        '<legend>Edit Post</legend>' +
+                        (state.invalid(model) ? INVALID_WARNING : '') +
+                        '<input type="hidden" name="_id" value="' + model.edit._id + '">' +
+                        '<div class="input-group">' +
+                            '<label for="post-title">Post title</label><br>' +
+                            '<input id="post-title" type="text" name="title" value="' + model.edit.title + '">' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<label for="post-content">Post content</label><br>' +
+                            '<textarea id="post-content" name="content">' + model.edit.content + '</textarea>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">Update post</button>' +
+                            BACK_TO_POSTS +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.displaying = function(model) {
+            var posts = Object.keys(model.posts).map(function(key) { return model.posts[key] })
+            posts = posts.map(
+                function(post) {
+                    return (
+                        '<li id="post-' + post._id + '">' +
+                            '<h3>' + post.title + '</h3>' +
+                            '<p>' + post.content + '</p>' +
+                            '<form id="post-actions-' + post._id + '">' +
+                                '<button type="button" class="button" data-on="click" data-action="edit" data-post="' + post._id + '">Edit post</button>' +
+                                '<button type="button" class="button button-link" data-action="destroy" data-post="' + post._id + '">Delete post</button>' +
+                            '</form>' +
+                        '</li>'
+                    )
+                }
+            )
+            return (
+                '<ul>' +
+                    posts.join('') +
+                '</ul>' +
+                '<form>' +
+                    '<button type="button" class="button" data-action="draft">New post</button>' +
+                '</form>'
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        // Available application states
+        state.empty = function(model) {
+            return (model.posts && Object.keys(model.posts).length === 0)
+        }
+
+        state.invalid = function(model) {
+            return (
+                (model.drafting && model.draft && (!model.draft.title || !model.draft.content)) ||
+                (model.editing && typeof model.edit === 'object' && (!model.edit._id || !model.edit.title || !model.edit.content))
+            )
+        }
+
+        state.drafting = function(model) {
+            return (model.drafting)
+        }
+
+        state.editing = function(model) {
+            return (model.editing && model.edit)
+        }
+
+        state.displaying = function(model) {
+            return (!state.empty(model) && !model.drafting && !model.editing)
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            if (state.displaying(model)) representation = view.displaying(model)
+            if (state.drafting(model)) representation = view.drafting(model)
+            if (state.editing(model)) representation = view.editing(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_' && name !== 'view'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function (model) {
+            if (state.empty(model) && !state.drafting(model)) action.draft()
+        }
+
+
+        // Actions
+        const action = { }
+        action.draft = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            present({ drafting: true })
+        }
+
+        action.publish = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            var post = {
+                title: data.title.value,
+                content: data.content.value
+            }
+
+            present({ publish: post })
+        }
+
+        action.update = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            var post = {
+                _id: data._id.value,
+                title: data.title.value,
+                content: data.content.value
+            }
+
+            present({ update: post })
+        }
+
+        action.destroy = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            present({ destroy: data.post })
+        }
+
+        action.edit = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            present({ edit: data.post })
+        }
+
+        action.posts = function(data, present) {
+            data = data || {}
+            present = present || model.present
+
+            present({ display: true })
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application
+        // Check for a previous state
+        var previousState = window.localStorage.getItem('blog-posts') || '{}'
+        var data = window.JSON.parse(previousState)
+        data.initialize = true
+        model.present(data)
+    })()
+    </script>
+</body>
+</html> 

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style type="text/css">
+            *,
+            *:after,
+            *:before {
+                box-sizing: border-box;
+                max-width: 800px;
+            }
+
+            .list-destinations {
+            }
+
+            .drop-zone {
+                border: 2px dashed #ccc;
+                border-radius: 4px;
+                display: inline-block;
+                float: left;
+                height: 225px;
+                margin-right: 16px;
+                padding: 16px;
+                position: relative;
+                text-align: center;
+                width: 300px;
+            }
+
+            .drop-zone.empty {
+                line-height: 193px;
+            }
+
+            .drop-zone.destination {
+                background-color: #f4f5f5; 
+            }
+
+            .drop-zone.filled {
+                background-color: rgb(88, 111, 141); 
+            }
+
+            .list-sources {
+                list-style: none;
+                margin: 16px 0 0;
+                padding: 0;
+            }
+
+            .option {
+                background: #ccc;
+                display: inline-block;
+                float: left;
+                height: 150px;
+                line-height: 150px;
+                margin: 0 8px 8px 0;
+                position: relative;
+                text-align: center;
+                width: 200px;
+            }
+
+            .option.source {
+                background-color: #eee;
+            }
+
+            .option-details {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .option-remove {
+                position: absolute;
+                bottom: 4px;
+                right: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Drag and drop form</h1>
+        <form>
+            <fieldset>
+                <legend>Pick two entrees</legend>
+                <div class="list-destinations">
+                    <div class="drop-zone empty" data-placeholder="ENTREE #1"></div>
+                    <div class="drop-zone empty" data-placeholder="ENTREE #2"></div>
+                </div>
+                <div style="clear:both;"></div>
+                <ul class="list-sources">
+                    <li draggable="true" data-entree="0" class="option">Pizza</li>
+                    <li draggable="true" data-entree="1" class="option">Cheeseburger</li>
+                    <li draggable="true" data-entree="2" class="option">Pasta</li>
+                    <li draggable="true" data-entree="3" class="option">Sandwich</li>
+                    <li draggable="true" data-entree="4" class="option">Soup</li>
+                    <li draggable="true" data-entree="5" class="option">Salad</li>
+                </ul>
+            </fieldset>
+            <fieldset>
+                <table>
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td id="total"></td>
+                    </tr>
+                </table>
+            </fieldset>
+        </form>
+        <script>
+            (function() {
+                var source = null
+                var entrees = []
+                var options = []
+
+                const ENTREE_OPTIONS = [
+                    { id: '0', name: 'Pizza', price: 12.99, popular: true },
+                    { id: '1', name: 'Cheeseburger', price: 9.99, popular: true },
+                    { id: '2', name: 'Pasta', price: 10.99, popular: false },
+                    { id: '3', name: 'Sandwich', price: 9.99, popular: false },
+                    { id: '4', name: 'Soup', price: 7.99, popular: false },
+                    { id: '5', name: 'Salad', price: 7.99, popular: true }
+                ]
+
+                var entreeToHtml = function(entree) {
+                    return (
+                        '<h3>' + entree.name + '</h3>' +
+                        '<ul class="option-details">' +
+                            ( entree.popular ? '<li>Popular</li>' : '' ) + 
+                            '<li>$' + entree.price + '</li>' +
+                        '</ul>' +
+                        '<button type="button" class="option-remove">Remove</button>'
+                    )
+                }
+
+                var dragstart = function(event) {
+                    source = this
+
+                    this.classList.add('source')
+                    var data = ENTREE_OPTIONS[this.dataset.entree]
+                    var json = window.JSON.stringify(data)
+                    event.dataTransfer.setData('application/json', json)
+                }
+
+                var dragleave = function(event) {
+                    this.classList.remove('destination')
+                }
+
+                var dragover = function(event) {
+                    event.preventDefault()
+                    this.classList.add('destination')
+                }
+
+                var drop = function(event) {
+                    event.stopPropagation()
+
+                    if (source !== this) {
+                        let entreeJson = event.dataTransfer.getData('application/json')
+                        let parsedEntree = window.JSON.parse(entreeJson)
+                        let html = entreeToHtml(parsedEntree)
+                        this.innerHTML = html
+                        this.classList.remove('empty')
+                        this.classList.add('filled')
+                        this.dataset.entree = parsedEntree.id
+                        register()
+                    }
+                }
+
+                var dragend = function(event) {
+                    source = null
+                    this.classList.remove('source')
+                    Array.prototype.forEach.call(
+                        entrees,
+                        function(element) {
+                            element.classList.remove('destination')
+                        }
+                    )
+                }
+
+                var register = function() {
+                    options = document.querySelectorAll('.option')
+                    Array.prototype.forEach.call(
+                        options,
+                        function(element) {
+                            element.addEventListener('dragstart', dragstart)
+                            element.addEventListener('dragend', dragend)
+                        }
+                    )
+
+                    entrees = document.querySelectorAll('.drop-zone')
+                    var total = 0
+                    Array.prototype.forEach.call(
+                        entrees,
+                        function(element) {
+                            if (element.classList.contains('filled')) {
+                                let entree = ENTREE_OPTIONS[element.dataset.entree]
+                                total += entree.price
+                                element.innerHTML = entreeToHtml(entree)
+                            }
+                            else { element.innerHTML = element.dataset.placeholder
+                            element.classList.add('empty') }
+                            element.addEventListener('dragleave', dragleave)
+                            element.addEventListener('dragover', dragover)
+                            element.addEventListener('drop', drop)
+                        }
+                    )
+
+                    var totalCell = document.getElementById('total')
+                    totalCell.innerHTML = '$' + total
+
+                    let buttons = document.querySelectorAll('.option-remove')
+                    Array.prototype.forEach.call(
+                        buttons,
+                        function(element) {
+                            element.addEventListener('click', function() {
+                                var parent = element.parentElement
+                                parent.dataset.entree = ''
+                                parent.classList.remove('filled')
+                                register()
+                            })
+                        }
+                    )
+                }
+
+                register()
+
+            })();
+        </script>
+    </body>
+</html>
