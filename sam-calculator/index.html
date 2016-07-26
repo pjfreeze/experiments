@@ -16,6 +16,13 @@
             font-size: 18px;
             text-align: right;
         }
+
+        .state-adding [data-action="add"],
+        .state-dividing [data-action="divide"],
+        .state-multiplying [data-action="multiply"],
+        .state-subtracting [data-action="subtract"] {
+            background-color: #ffa448;
+        }
     </style>
 </head>
 <body>
@@ -34,10 +41,8 @@
 
         // Model
         const model = {
-            action: '',
-            done: false,
+            actions: [ ],
             input: '',
-            started: false,
             value: 0
         }
 
@@ -49,34 +54,20 @@
             subtract: true
         }
 
-        model.present = function(intent, data) {
-            if (intent === 'input') {
-                model.started = true
-                model.input += data
+        model.present = function(data) {
+            data = data || {}
+
+            if (data.intent in OPERATORS) {
+                if (model.actions.length === 0) {
+                    model.value = window.parseFloat(model.input, 10)
+                    model.input = ''
+                }
+                model.actions.push(data.intent)
             }
 
-            if (intent in OPERATORS) {
-                if (model.action === '') model.value = parseFloat(model.input)
-                else if (model.action === 'add') model.value += parseFloat(model.input)
-                else if (model.action === 'divide') model.value /= parseFloat(model.input)
-                else if (model.action === 'multiply') model.value *= parseFloat(model.input)
-                else if (model.action === 'subtract') model.value -= parseFloat(model.input)
-            }
-
-            if (intent in OPERATORS) {
-                model.action = intent
-                model.input = ''
-            }
-
-            if (model.action === 'equals') model.done = true
-
-            if (intent === 'clear') {
-                model.action = ''
-                model.done = false
-                model.input = ''
-                model.started = false
-                model.value = 0
-            }
+            if (data.actions) model.actions = data.actions
+            if (data.input !== undefined) model.input = data.input
+            if (data.value !== undefined) model.value = data.value
 
             state._render(model)
         }
@@ -86,7 +77,8 @@
         const view = { }
 
         view.calculator = function(model) {
-            var value = model.done ? model.value : (model.input || (model.started ? '' : '0'))
+            var value = (model.input || model.value)
+            var attributes = 'data-action="input" data-value="' + model.value + '" data-input="' + model.input + '"'
             return (
                 '<form class="calculator">' +
                     '<fieldset>' +
@@ -99,26 +91,26 @@
                             '<button type="button" title="Divide" class="button" data-action="divide">&divide;</button>' +
                         '</div>' +
                         '<div class="input-group">' +
-                            '<button type="button" class="button" data-action="input" data-value="7">7</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="8">8</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="9">9</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="7">7</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="8">8</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="9">9</button>' +
                             '<button type="button" title="Multiply" class="button" data-action="multiply">&times;</button>' +
                         '</div>' +
                         '<div class="input-group">' +
-                            '<button type="button" class="button" data-action="input" data-value="4">4</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="5">5</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="6">6</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="4">4</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="5">5</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="6">6</button>' +
                             '<button type="button" title="Subtract" class="button" data-action="subtract">-</button>' +
                         '</div>' +
                         '<div class="input-group">' +
-                            '<button type="button" class="button" data-action="input" data-value="1">1</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="2">2</button>' +
-                            '<button type="button" class="button" data-action="input" data-value="3">3</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="1">1</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="2">2</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="3">3</button>' +
                             '<button type="button" title="Add" class="button" data-action="add">+</button>' +
                         '</div>' +
                         '<div class="input-group">' +
-                            '<button type="button" class="button" data-action="input" data-value="0">0</button>' +
-                            '<button type="button" class="button" data-action="input" data-value=".">.</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key="0">0</button>' +
+                            '<button type="button" class="button" ' + attributes + ' data-key=".">.</button>' +
                             '<a type="button" class="button">&nbsp;</a>' +
                             '<button type="button" title="Equals" class="button" data-action="equals">=</button>' +
                         '</div>' +
@@ -134,6 +126,22 @@
 
         // States
         const state = { }
+
+        state.adding = function(model) {
+            return model.actions[0] === 'add'
+        }
+
+        state.dividing = function(model) {
+            return model.actions[0] === 'divide'
+        }
+
+        state.multiplying = function(model) {
+            return model.actions[0] === 'multiply'
+        }
+
+        state.subtracting = function(model) {
+            return model.actions[0] === 'subtract'
+        }
 
         state._render = function(model) {
             state._representation(model)
@@ -181,40 +189,98 @@
 
         // Next action predicate, derives whether the system is
         // in a (control) state where an action needs to be invoked
-        state._next = function (model) {
-            // Pass
+        state._next = function(model) {
+            if (model.actions.length === 2) {
+                let method = model.actions.shift()
+                action[method](model, true)
+            } else if (model.actions.length === 1 && model.actions[0] === 'equals') {
+                model.actions.pop()
+            }
         }
 
 
         // Actions
         const action = { }
 
-        action.add = function() {
-            model.present('add')
+        action.add = function(dataset, perform) {
+            var data = { }
+
+            if (perform) {
+                data.value = dataset.value + window.parseFloat(dataset.input, 10)
+                data.input = ''
+            } else {
+                data.intent = 'add'
+            }
+
+            model.present(data)
         }
 
         action.clear = function() {
-            model.present('clear')
+            var data = {
+                actions: [ ],
+                input: '',
+                value: 0
+            }
+
+            model.present(data)
         }
 
-        action.divide = function() {
-            model.present('divide')
+        action.divide = function(dataset, perform) {
+            var data = { }
+
+            if (perform) {
+                data.value = dataset.value / window.parseFloat(dataset.input, 10)
+                data.input = ''
+            } else {
+                data.intent = 'divide'
+            }
+
+            model.present(data)
         }
 
-        action.equals = function() {
-            model.present('equals')
+        action.equals = function(dataset, perform) {
+            var data = { }
+
+            if (perform) {
+                // Pass
+            } else {
+                data.intent = 'equals'  
+            }
+
+            model.present(data)
         }
 
         action.input = function(dataset) {
-            model.present('input', dataset.value)
+            var data = {
+                input: dataset.input += dataset.key
+            }
+
+            model.present(data)
         }
 
-        action.multiply = function() {
-            model.present('multiply')
+        action.multiply = function(dataset, perform) {
+            var data = { }
+
+            if (perform) {
+                data.value = dataset.value * window.parseFloat(dataset.input, 10)
+                data.input = ''
+            } else {
+                data.intent = 'multiply'
+            }
+
+            model.present(data)
         }
 
-        action.subtract = function() {
-            model.present('subtract')
+        action.subtract = function(dataset, perform) {
+            var data = { }
+            if (perform) {
+                data.value = dataset.value - window.parseFloat(dataset.input, 10)
+                data.input = ''
+            } else {
+                data.intent = 'subtract'
+            }
+
+            model.present(data)
         }
 
 
