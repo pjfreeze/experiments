@@ -270,7 +270,9 @@
                 destroy: dataset.todo
             }
 
-            model.present(data)
+            if (window.confirm('Are you sure you want to delete this task?')) {
+                model.present(data)
+            }
         }
 
         action.incomplete = function(dataset) {

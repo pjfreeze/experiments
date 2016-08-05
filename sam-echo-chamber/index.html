@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Echo Chamber</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>&mdash; Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'Echo Chamber'
+
+        const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+
+        // Model
+        const model = {
+            connected: false,
+            conversation: [ { message: 'Post a message and watch it come back!', from: 'Echo', datetime: new Date() } ],
+            draft: null,
+            loading: false,
+            posting: false,
+            name: ''
+        }
+
+        model.present = function(data) {
+            data = data || {}
+
+            if (data.name !== undefined) {
+                model.name = data.name
+                model.connected = true
+            }
+
+            if (data.message) {
+                if (state.posting(model)) {
+                    model.conversation.push(model.draft)
+                    model.posting = false
+                    model.draft = null
+                } else {
+                    model.posting = true
+                    model.draft = {
+                        datetime: new Date(),
+                        echo: data.echo || false,
+                        from: data.from,
+                        message: data.message
+                    }
+                }
+            }
+
+            if (data.connected !== undefined) model.connected = data.connected
+
+            state._render(model)
+        }
+
+
+        // Partials
+        const partial = { }
+
+        partial.connection = function(name) {
+            return (
+                '<div>' +
+                    '<h3>Connected as ' + name + '</h3>' +
+                '</div>'
+            )
+        }
+
+        partial.conversationList = function(conversation) {
+            var messages = conversation.map(
+                function(message) {
+                    return (
+                        '<li>' +
+                            '<p class="detail">' +
+                                message.from + ' &middot; ' +
+                                '<span title="'+ partial.date(message.datetime) + '">' +
+                                    partial.time(message.datetime) +
+                                '</span>' +
+                            '</p>' +
+                            '<p>' + message.message + '</p>' +
+                        '</li>'
+                    )
+                }
+            )
+            return (
+                '<ul>' +
+                    '<p>' + messages.join('') + '</p>' +
+                '</ul>'
+            )
+        }
+
+        partial.date = function(date) {
+            return (
+                MONTHS[date.getMonth()] + ' ' +
+                date.getDate() + ', ' +
+                date.getFullYear()
+            )
+        }
+
+        partial.time = function(date) {
+            var hour = date.getHours()
+            var pm = hour >= 12
+
+            var minutes = date.getMinutes()
+
+            return (
+                (hour > 12 ? hour - 12 : hour) +
+                ':' +
+                (minutes < 10 ? '0' + minutes : minutes) +
+                (pm ? ' PM' : ' AM')
+            )
+        }
+
+        partial.formConnect = function() {
+            return (
+                '<form data-action="connect">' +
+                    '<fieldset>' +
+                        '<legend>Enter your name to connect!</legend>' +
+                        '<div class="input-group">' +
+                            '<label for="input-name">What is your name?</label>' +
+                            '<input type="text" id="input-name" name="name" placeholder="e.g. Jill" autofocus>' +
+                            '<p class="input-help">This will be used to identify you in the chat room</p>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">Connect</button>' +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        partial.formConversation = function(model) {
+            var disabled = state.posting(model) ? ' disabled="true"' : ''
+            var submit = state.posting(model) ? 'Posting' : 'Post'
+            return (
+                '<form data-action="post"' + disabled + '>' +
+                    '<fieldset>' +
+                        '<div class="input-group">' +
+                            '<input type="hidden" name="name" value="' + model.name + '">' +
+                            '<textarea id="input-message" name="message" placeholder="e.g. Hello" autofocus>' + ((model.draft && model.draft.message) || '') + '</textarea>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">' + submit + '</button>' +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+
+        // Views
+        const view = { }
+
+        view.anonymous = function(model) {
+            return (
+                partial.formConnect()
+            )
+        }
+
+        view.connected = function(model) {
+            return (
+                partial.connection(model.name) +
+                partial.conversationList(model.conversation) +
+                partial.formConversation(model)
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // States
+        const state = { }
+
+        state.anonymous = function(model) {
+            return model.name === ''
+        }
+
+        state.identified = function(model) {
+            return model.name !== ''
+        }
+
+        state.connected = function(model) {
+            return model.connected === true
+        }
+
+        state.posting = function(model) {
+            return ( model.posting )
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            if (state.anonymous(model)) representation = view.anonymous(model)
+            if (state.identified(model) && state.connected(model)) representation = view.connected(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function(model) {
+            if (state.connected(model) && state.anonymous(model)) action.disconnect()
+            if (state.posting(model)) action._post(model.draft)
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.connect = function(form) {
+            var data = {
+                name: form.name.value
+            }
+
+            model.present(data)
+        }
+
+        action.disconnect = function() {
+            var data = {
+                connected: false
+            }
+
+            model.present(data)
+        }
+
+        action.load = function(data) {
+            model.present(data)
+        }
+
+        action._post = function(draft) {
+            window.setTimeout(
+                function() {
+                    model.present(draft)
+                    if (!draft.echo) {
+                        window.setTimeout(
+                            function() {
+                                var echo = {
+                                    datetime: new Date(),
+                                    echo: true,
+                                    from: 'Echo',
+                                    message: draft.message
+                                }
+                                model.present(echo)
+                            },
+                            1000
+                        )
+                    }
+                },
+                1000
+            )
+        }
+
+        action.post = function(form) {
+            var data = {
+                from: form.name.value,
+                message: form.message.value
+            }
+
+            model.present(data)
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application by checking for previously saved
+        // application states and using it as a starting point
+        model.present()
+    })()
+    </script>
+</body>
+</html> 

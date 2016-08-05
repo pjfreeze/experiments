@@ -7,18 +7,21 @@
 <body>
     <div id="application">
         <blockquote>
-            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
-            <footer>&mdash; Andy Weir, The Martian</footer>
+            <p>
+                Problem is (follow me closely here, the science is pretty complicated),
+                if I cut a hole in the Hab, the air won't stay inside anymore.
+            </p>
+            <footer>&mdash; Andy Weir, <i>The Martian</i></footer>
         </blockquote>
     </div>
 
     <script type="text/javascript">
-    (function() {
+    ;(function() {
         const $APPLICATION = document.getElementById('application')
-        const APPLICATION_NAME = ''
 
 
-        // Model
+        // Model. Attributes to persist data or state
+        // that the application uses
         const model = { }
 
         model.present = function(data) {
@@ -26,155 +29,78 @@
         }
 
 
-        // Partials
+        // Partials. Optionally used by views to keep
+        // views shorter and DRY
         const partial = { }
 
-        partial.example = function() {
+        partial.example = function(model) {
             return (
-                ''
+                '<blockquote>' +
+                    '<p>' +
+                        'Problem is (follow me closely here, the science is pretty complicated), ' +
+                        'if I cut a hole in the Hab, the air won&rsquo;t stay inside anymore.' +
+                    '</p>' +
+                    '<footer>&mdash; Andy Weir, <i>The Martian</i></footer>' +
+                '</blockquote>'
             )
         }
 
 
-        // Views
+        // Views. Full application control over the presentation
+        // of the Model and State
         const view = { }
-
-        view.example = function(model) {
-            return (
-                ''
-            )
-        }
 
         view._display = function(representation) {
             $APPLICATION.innerHTML = representation
         }
 
+        view.example = function(model) {
+            return (
+                partial.example(model)
+            )
+        }
 
-        // States
+
+        // States. Interpretations of the model indicating
+        // a current state of the application
         const state = { }
 
-        state.example = function(model) {
-            return ( true )
+        // Next action predicate, decides whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function(model) {
+            // Pass
         }
 
         state._render = function(model) {
             state._representation(model)
-            state._update(model)
             state._next(model)
         }
 
         // Derive the state representation as a function of the system
         // control state
         state._representation = function(model) {
-            var representation = 'oops... something went wrong, the system is in an invalid state'
+            var representation = 'Oops... something went wrong!'
 
-            if (state.example(model) === 'incomplete') representation = view.example(model)
+            if (state.example(model)) representation = view.example(model)
 
             view._display(representation)
         }
 
-        // Add classes to the $APPLICATION for each active state
-        state._update = function(model) {
-            var states = Object.keys(state)
-            var classprefix = 'state-'
-
-            // Only check actual states, not internal functions
-            // or the "view" object
-            states = states.filter(
-                function(name) {
-                    return name.charAt(0) !== '_'
-                }
-            )
-
-            // Toggle the state's class on/off based on if the state
-            // is "active"
-            states.forEach(
-                function(name) {
-                    var classname = classprefix + name
-                    var isStateActive = state[name](model)
-
-                    $APPLICATION.classList.toggle(
-                        classname,
-                        isStateActive
-                    )
-                }
-            )
-        }
-
-        // Next action predicate, derives whether the system is
-        // in a (control) state where an action needs to be invoked
-        state._next = function (model) {
-            // Pass
+        state.example = function(model) {
+            return ( true )
         }
 
 
-        // Actions
-        const action = { }
+        // Actions. Initiated by a control state or by
+        // a user event
+        const actions = window.actions = { }
 
         action.example = function(data) {
             model.present(data)
         }
 
 
-        // Prepare listeners for actions, using [data-on="{type}"]
-        // and [data-action="{action method}"] to trigger actions
-        // Click events get the element's dataset, submit events
-        // get the form element (access to fields)
-
-        const CLICK_EVENT_ELEMENTS = {
-            'A': true,
-            'BUTTON': true
-        }
-
-        $APPLICATION.addEventListener(
-            'click',
-            function(event) {
-                var element = event.target
-                var dataset = element.dataset || {}
-                var valid = (
-                    element.nodeName in CLICK_EVENT_ELEMENTS ||
-                    dataset.on === 'click'
-                )
-
-                // Cancel default behavior if this form has an associated action
-                if (valid && dataset.action) {
-                    event.preventDefault()
-                    event.stopPropagation()
-
-                    // Kick off the matching action
-                    action[dataset.action](dataset)
-                }
-            }
-        )
-
-        const SUBMIT_EVENT_ELEMENTS = {
-            'FORM': true
-        }
-
-        $APPLICATION.addEventListener(
-            'submit',
-            function(event) {
-                var element = event.target
-                var dataset = element.dataset || {}
-                var valid = (
-                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
-                    dataset.on === 'submit'
-                )
-
-                // Cancel default behavior if this form has an associated action
-                if (valid && dataset.action) {
-                    event.preventDefault()
-                    event.stopPropagation()
-
-                    // Kick off the matching action
-                    action[dataset.action](element)
-                }
-            }
-        )
-
-
-        // Initialize application by checking for previously saved
-        // application states and using it as a starting point
+        // Initialize
         model.present()
     })()
     </script>

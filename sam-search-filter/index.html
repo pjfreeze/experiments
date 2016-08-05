@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>
+                Problem is (follow me closely here, the science is pretty complicated),
+                if I cut a hole in the Hab, the air won't stay inside anymore.
+            </p>
+            <footer>&mdash; Andy Weir, <i>The Martian</i></footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    ;(function() {
+        const $APPLICATION = document.getElementById('application')
+        const INPUT_QUERY_ID = 'input-query'
+
+        // Model. Attributes to persist data or state
+        // that the application uses
+        const model = {
+            query: '',
+            filtered: [],
+            friends: [
+                'Allison', 'Bob', 'Catherine', 'Dave',
+                'Ellen', 'Fred', 'Grace', 'Henry',
+                'Ian', 'Jackie', 'Katie', 'Louis',
+                'Margaret', 'Newman', 'Olivia', 'Peter',
+                'Quin', 'Richard', 'Stephanie', 'Travis',
+                'Ursula', 'Victor', 'Wendy', 'Xavier',
+                'Yeira', 'Zack'
+            ]
+        }
+
+        model.present = function(data) {
+            data = data || {}
+            if (data.query !== undefined) {
+                model.query = data.query
+                model.filtered = model.friends.filter(
+                    function(friend) {
+                        return friend.toLowerCase().indexOf(model.query.toLowerCase()) !== -1
+                    }
+                )
+            }
+
+            state._render(model)
+        }
+
+
+        // Partials. Optionally used by views to keep
+        // views shorter and DRY
+        const partial = { }
+
+        partial.formFilter = function(query) {
+            query = query || ''
+            return (
+                '<form data-action="filter">' +
+                    '<fieldset>' +
+                        '<input type="hidden" name="previousQuery" value="' + query + '" />' +
+                        '<div class="input-group">' +
+                            '<label for="' + INPUT_QUERY_ID + '">Search for a friend</label>' +
+                            '<input ' + (query ? 'autofocus ' : '') + 'id="' + INPUT_QUERY_ID + '" ' +
+                                'name="query" onfocus="this.value = this.value" ' +
+                                'onkeyup="window.actions.filter(this.form)" ' +
+                                'placeholder="e.g. Sarah" type="text" ' +
+                                'value="' + query + '" />' +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        partial.listFriends = function(friends, numberOfFiltered) {
+            const list = friends.map(
+                function(friend) {
+                    return '<li>' + friend + '</li>'
+                }
+            )
+            return (
+                (
+                    numberOfFiltered !== undefined ?
+                        '<p>There are ' + numberOfFiltered + ' matching friends</p>' :
+                        '') +
+                '<ul>' +
+                    list.join('') +
+                '</ul>'
+            )
+        }
+
+
+        // Views. Full application control over the presentation
+        // of the Model and State
+        const view = { }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+        view.all = function(model) {
+            return (
+                partial.formFilter() +
+                '<hr>' +
+                partial.listFriends(model.friends)
+            )
+        }
+
+        view.filtered = function(model) {
+            return (
+                partial.formFilter(model.query) +
+                '<hr>' +
+                partial.listFriends(model.filtered, model.filtered.length)
+            )
+        }
+
+
+        // States. Interpretations of the model indicating
+        // a current state of the application
+        const state = { }
+
+        // Next action predicate, decides whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function(model) {
+            var element = document.getElementById(INPUT_QUERY_ID)
+            element.focus()
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'Oops... something went wrong!'
+
+            if (state.all(model)) representation = view.all(model)
+            else if (state.filtered(model)) representation = view.filtered(model)
+
+            view._display(representation)
+        }
+
+        state.all = function(model) {
+            return ( model.query === '' )
+        }
+
+        state.filtered = function(model) {
+            return ( model.query !== '' )
+        }
+
+
+        // Actions. Initiated by a control state or by
+        // a user event
+        const actions = window.actions = { }
+
+        actions.filter = function(form) {
+            var previous = form.previousQuery.value
+            var current = form.query.value
+            var data = {
+                query: current
+            }
+
+            if (previous.toLowerCase().trim() !== current.toLowerCase().trim()) {
+                model.present(data)
+            }
+        }
+
+
+        // Initialize
+        model.present()
+    })()
+    </script>
+</body>
+</html> 

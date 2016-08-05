@@ -78,6 +78,11 @@ p {
     max-width: 576px;
 }
 
+p.detail {
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
 
 /*******************
 * Anchors
@@ -124,7 +129,7 @@ hr {
 
 [disabled] {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: 0.75;
 }
 
 
@@ -354,6 +359,6 @@ input[type="radio"] + label {
 
 #application {
     margin: 0 auto;
-    max-width: 1056px;
+    max-width: 768px;
     padding: 16px;
 }

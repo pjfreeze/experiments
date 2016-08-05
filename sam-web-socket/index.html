@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Sockets</title>
+    <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+    <div id="application">
+        <blockquote>
+            <p>Problem is (follow me closely here, the science is pretty complicated), if I cut a hole in the Hab, the air won't stay inside anymore.</p>
+            <footer>&mdash; Andy Weir, The Martian</footer>
+        </blockquote>
+    </div>
+
+    <script type="text/javascript">
+    (function() {
+        const $APPLICATION = document.getElementById('application')
+        const APPLICATION_NAME = 'Web Sockets'
+        const WEB_SOCKET_URL = 'wss://echo.websocket.org'
+        const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+
+        // Model
+        const model = {
+            connected: false,
+            messages: [ ]
+        }
+
+        model.present = function(data) {
+            data = data || { }
+
+            if (data.connected && data.url) {
+                model.connected = true
+                model.socket = new WebSocket(data.url)
+            }
+
+            if (state.connected(model) && data.content) {
+                if (data.type === 'sent') {
+                    model.socket.onmessage = action.received
+                    model.messages.push(data)
+                    model.socket.send(data.content)
+                } else if (data.type === 'received') {
+                    model.messages.push(data)
+                }
+            }
+
+            if (state.connected(model) && data.connected === false) {
+                model.connected = false
+                model.messages = [ ]
+                model.socket.close()
+            }
+
+            state._render(model)
+        }
+
+
+        // States
+        const state = { }
+
+        state.connected = function(model) {
+            return model.connected
+        }
+
+        state.disconnected = function(model) {
+            return !state.connected(model)
+        }
+
+        state._render = function(model) {
+            state._representation(model)
+            state._update(model)
+            state._next(model)
+        }
+
+        // Derive the state representation as a function of the system
+        // control state
+        state._representation = function(model) {
+            var representation = 'oops... something went wrong, the system is in an invalid state'
+
+            if (state.connected(model)) representation = view.connected(model)
+            if (state.disconnected(model)) representation = view.disconnected(model)
+
+            view._display(representation)
+        }
+
+        // Add classes to the $APPLICATION for each active state
+        state._update = function(model) {
+            var states = Object.keys(state)
+            var classprefix = 'state-'
+
+            // Only check actual states, not internal functions
+            // or the "view" object
+            states = states.filter(
+                function(name) {
+                    return name.charAt(0) !== '_'
+                }
+            )
+
+            // Toggle the state's class on/off based on if the state
+            // is "active"
+            states.forEach(
+                function(name) {
+                    var classname = classprefix + name
+                    var isStateActive = state[name](model)
+
+                    $APPLICATION.classList.toggle(
+                        classname,
+                        isStateActive
+                    )
+                }
+            )
+        }
+
+        // Next action predicate, derives whether the system is
+        // in a (control) state where an action needs to be invoked
+        state._next = function(model) {
+            // Pass
+        }
+
+
+        // Partials
+        const partial = { }
+
+        partial.messages = function(messages) {
+            var list = messages.map(
+                function(message) {
+                    return (
+                        '<li>' +
+                            '<p class="detail">' +
+                                message.type + ' &middot; ' +
+                                '<span title="'+ partial.datetime(message.timestamp) + '">' +
+                                    partial.time(message.timestamp) +
+                                '</span>' +
+                            '</p>' +
+                            '<p>' + message.content + '</p>' +
+                        '</li>'
+                    )
+                }
+            )
+            return (
+                '<ul>' +
+                    list.join('')+
+                '</ul>'
+            )
+        }
+
+        partial.datetime = function(date) {
+            return (
+                partial.date(date) + ' ' +
+                partial.time(date, true)
+            )
+        }
+
+        partial.date = function(date) {
+            return (
+                MONTHS[date.getMonth()] + ' ' +
+                date.getDate() + ', ' +
+                date.getFullYear()
+            )
+        }
+
+        partial.time = function(date, detailed) {
+            var hour = date.getHours()
+            var pm = hour >= 12
+
+            var minutes = date.getMinutes()
+            var seconds = date.getSeconds()
+
+            return (
+                (hour > 12 ? hour - 12 : hour) +
+                ':' +
+                (minutes < 10 ? '0' + minutes : minutes) +
+                (detailed ? seconds < 10 ? ':0' + seconds : ':' + seconds : '') +
+                (pm ? ' PM' : ' AM')
+            )
+        }
+
+
+        // Views
+        const view = { }
+
+        view.connected = function(model) {
+            return (
+                partial.messages(model.messages) + 
+                '<form name="message" data-action="send">' + 
+                    '<fieldset>' + 
+                        '<legend>Send a message!</legend>' +
+                        '<div class="input-group">' +
+                            '<textarea autofocus name="content" placeholder="e.g. Hello!"></textarea>' +
+                        '</div>' +
+                        '<div class="input-group">' +
+                            '<button type="submit" class="button">Send message</button>' +
+                            '<button type="button" class="button button-link" data-action="disconnect">Disconnect</button>' +
+                        '</div>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view.disconnected = function(model) {
+            return (
+                '<form name="connect" data-action="connect">' + 
+                    '<fieldset>' + 
+                        '<legend>Connect now to enter the echo chamber</legend>' +
+                        '<button type="submit" class="button">Connect!</button>' +
+                    '</fieldset>' +
+                '</form>'
+            )
+        }
+
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+
+        // Actions
+        const action = { }
+
+        action.connect = function(form) {
+            var data = {
+                connected: true,
+                url: WEB_SOCKET_URL
+            }
+
+            model.present(data)
+        }
+
+        action.disconnect = function() {
+            var data = {
+                connected: false
+            }
+
+            if (window.confirm('Are you sure you want to disconnect?')) {
+                model.present(data)
+            }
+        }
+
+        action.received = function(event) {
+            var data = {
+                content: event.data,
+                timestamp: new Date(),
+                type: 'received'
+            }
+
+            model.present(data)
+        }
+
+        action.send = function(form) {
+            var data = {
+                content: form.content.value,
+                timestamp: new Date(),
+                type: 'sent'
+            }
+
+            model.present(data)
+        }
+
+
+        // Prepare listeners for actions, using [data-on="{type}"]
+        // and [data-action="{action method}"] to trigger actions
+        // Click events get the element's dataset, submit events
+        // get the form element (access to fields)
+
+        const CLICK_EVENT_ELEMENTS = {
+            'A': true,
+            'BUTTON': true
+        }
+
+        $APPLICATION.addEventListener(
+            'click',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in CLICK_EVENT_ELEMENTS ||
+                    dataset.on === 'click'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](dataset)
+                }
+            }
+        )
+
+        const SUBMIT_EVENT_ELEMENTS = {
+            'FORM': true
+        }
+
+        $APPLICATION.addEventListener(
+            'submit',
+            function(event) {
+                var element = event.target
+                var dataset = element.dataset || {}
+                var valid = (
+                    element.nodeName in SUBMIT_EVENT_ELEMENTS ||
+                    dataset.on === 'submit'
+                )
+
+                // Cancel default behavior if this form has an associated action
+                if (valid && dataset.action) {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    // Kick off the matching action
+                    action[dataset.action](element)
+                }
+            }
+        )
+
+
+        // Initialize application by checking for previously saved
+        // application states and using it as a starting point
+        model.present()
+    })()
+    </script>
+</body>
+</html> 
