@@ -24,40 +24,10 @@
         // that the application uses
         const model = { }
 
+        // Provide data for the model
+        // to use in update/changing it's current state
         model.present = function(data) {
             state._render(model)
-        }
-
-
-        // Partials. Optionally used by views to keep
-        // views shorter and DRY
-        const partial = { }
-
-        partial.example = function(model) {
-            return (
-                '<blockquote>' +
-                    '<p>' +
-                        'Problem is (follow me closely here, the science is pretty complicated), ' +
-                        'if I cut a hole in the Hab, the air won&rsquo;t stay inside anymore.' +
-                    '</p>' +
-                    '<footer>&mdash; Andy Weir, <i>The Martian</i></footer>' +
-                '</blockquote>'
-            )
-        }
-
-
-        // Views. Full application control over the presentation
-        // of the Model and State
-        const view = { }
-
-        view._display = function(representation) {
-            $APPLICATION.innerHTML = representation
-        }
-
-        view.example = function(model) {
-            return (
-                partial.example(model)
-            )
         }
 
 
@@ -71,6 +41,8 @@
             // Pass
         }
 
+        // Step through updating the application and handling
+        // the optional control state
         state._render = function(model) {
             state._representation(model)
             state._next(model)
@@ -79,14 +51,14 @@
         // Derive the state representation as a function of the system
         // control state
         state._representation = function(model) {
-            var representation = 'Oops... something went wrong!'
+            var representation = 'Oops... Something went wrong!'
 
-            if (state.example(model)) representation = view.example(model)
+            if (state.blank(model)) representation = view.blank(model)
 
             view._display(representation)
         }
 
-        state.example = function(model) {
+        state.blank = function(model) {
             return ( true )
         }
 
@@ -95,13 +67,46 @@
         // a user event
         const actions = window.actions = { }
 
-        action.example = function(data) {
-            model.present(data)
+        actions.initialize = function() {
+            model.present()
         }
 
 
-        // Initialize
-        model.present()
+        // Views. Full application control over the presentation
+        // of the Model and State
+        const view = { }
+
+        // Handle the logic of binding the resulting
+        // changes to the page
+        view._display = function(representation) {
+            $APPLICATION.innerHTML = representation
+        }
+
+        view.blank = function(model) {
+            return (
+                theme.quote()
+            )
+        }
+
+
+        // Themes. Optionally used by views to keep
+        // views decoupled as well as shorter and DRY
+        const theme = { }
+
+        theme.quote = function() {
+            return (
+                '<blockquote>' +
+                    '<p>' +
+                        'Problem is (follow me closely here, the science is pretty complicated), ' +
+                        'if I cut a hole in the Hab, the air won&rsquo;t stay inside anymore.' +
+                    '</p>' +
+                    '<footer>&mdash; Andy Weir, <i>The Martian</i></footer>' +
+                '</blockquote>'
+            )
+        }
+
+
+        actions.initialize()
     })()
     </script>
 </body>

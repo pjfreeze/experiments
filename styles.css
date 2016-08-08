@@ -83,6 +83,12 @@ p.detail {
     margin-bottom: 4px;
 }
 
+blockquote {
+    margin: 32px 0 32px;
+    max-width: 544px;
+    padding: 0 32px;
+}
+
 
 /*******************
 * Anchors
@@ -241,36 +247,38 @@ input[type="radio"] + label {
 * Alerts
 *******************/
 
+.error,
+.info,
+.success,
+.warn {
+    font-size: 14px;
+    padding: 8px;
+    margin: 0 0 16px;
+    max-width: 576px;
+}
+
 .error {
     background: #fdeeea;
     border-left: 4px solid #e25828;
     color: #e25828;
-    font-size: 14px;
-    padding: 8px;
 }
 
 .info {
     background:#e7f5fa;
     border-left: 4px solid #0c94cb;
     color: #0c94cb;
-    font-size: 14px;
-    padding: 8px;
 }
 
 .success {
     background: #e5f6f3;
     border-left: 4px solid #00a681;
     color: #00a681;
-    font-size: 14px;
-    padding: 8px;
 }
 
 .warn {
     background: #fef7e9;
     border-left: 4px solid #efaa1e;
     color: #efaa1e;
-    font-size: 14px;
-    padding: 8px;
 }
 
 
@@ -350,6 +358,27 @@ input[type="radio"] + label {
     transform: none;
 
     transition: none;
+}
+
+.button.button-inverse,
+.button.button-inverse:visited {
+    background: rgba(0, 0, 0, .3);
+    box-shadow: none;
+    color: #ffffff;
+    text-align: center;
+    transform: none;
+
+    transition: background 150ms;
+}
+
+.button.button-inverse:active,
+.button.button-inverse:focus,
+.button.button-inverse:hover {
+    background: rgba(0, 0, 0, .45);
+    text-decoration: none;
+    transform: none;
+
+    transition: background 150ms;
 }
 
 

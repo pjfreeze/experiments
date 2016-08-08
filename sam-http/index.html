@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+<body>
+	<div id="application">
+		<blockquote>
+			<p>
+				Problem is (follow me closely here, the science is pretty complicated),
+				if I cut a hole in the Hab, the air won't stay inside anymore.
+			</p>
+			<footer>&mdash; Andy Weir, <i>The Martian</i></footer>
+		</blockquote>
+	</div>
+
+	<script type="text/javascript">
+	;(function() {
+		const $APPLICATION = document.getElementById('application')
+
+
+		// Model. Attributes to persist data or state
+		// that the application uses
+		const model = {
+			loading: false,
+			people: [ ]
+		}
+
+		// Provide data for the model
+		// to use in update/changing it's current state
+		model.present = function(data) {
+			if (data.loading) model.loading = data.loading || false
+
+			if (state.loading(model)) {
+				if (data.error) {
+					model.error = data.error
+					model.errorMessage = data.errorMessage
+				} else if (data.people) {
+					model.loading = false
+					model.people = data.people
+				}
+			}
+
+			state._render(model)
+		}
+
+		model.intent = {
+			load: 'actions.load'
+		}
+
+
+		// States. Interpretations of the model indicating
+		// a current state of the application
+		const state = { }
+
+		// Next action predicate, decides whether the system is
+		// in a (control) state where an action needs to be invoked
+		state._next = function(model) {
+			// Pass
+		}
+
+		// Step through updating the application and handling
+		// the optional control state
+		state._render = function(model) {
+			state._representation(model)
+			state._next(model)
+		}
+
+		// Derive the state representation as a function of the system
+		// control state
+		state._representation = function(model) {
+			var representation = 'Oops... Something went wrong!'
+
+			if (state.error(model)) {
+				representation = view.error(model)
+			} else if (state.loading(model)) {
+				representation = view.loading(model)
+			}
+			if (state.ready(model)) {
+				representation = view.ready(model)
+			}
+
+			view._display(representation)
+		}
+
+		state.error = function(model) {
+			return model.error
+		}
+
+		state.loading = function(model) {
+			return model.loading
+		}
+
+		state.ready = function(model) {
+			return !model.loading
+		}
+
+
+		// Views. Full application control over the presentation
+		// of the Model and State
+		const view = { }
+
+		// Handle the logic of binding the resulting
+		// changes to the page
+		view._display = function(representation) {
+			$APPLICATION.innerHTML = representation
+		}
+
+		view.error = function(model) {
+			return (
+				'<p class="error"><strong>Error</strong><br>' + model.errorMessage + '</p>' +
+				theme.quoteError()
+			)
+		}
+
+		view.loading = function(model) {
+			return (
+				'<p class="info"><strong>Loading</strong><br>This should just take a moment.</p>' +
+				theme.quoteLoading()
+			)
+		}
+
+		view.ready = function(model) {
+			return (
+				'<div class="success">' +
+					'<p><strong>Ready</strong><br>Successfully retrieve the guest list!</p>' +
+					'<form onsubmit="return ' + model.intent.load + '({})">' +
+						'<fieldset>' +
+							'<button type="submit" class="button button-inverse">Refresh</button>' +
+						'</fieldset>' +
+					'</form>' +
+				'</div>' +
+				theme.listPeople(model.people)
+			)
+		}
+
+
+		// Themes. Optionally used by views to keep
+		// views decoupled as well as shorter and DRY
+		const theme = { }
+
+		theme.listPeople = function(people) {
+			var liElements = people.map(
+				function(person) {
+					return '<li>' + person + '</li>'
+				}
+			)
+			return (
+				'<ul>' +
+					liElements.join('') +
+				'</ul>'
+			)
+		}
+
+		theme.quoteError = function() {
+			return (
+				'<blockquote>' +
+					'<p>' +
+						'I have not failed. I&rsquo;ve just found 10,000 ways that won&rsquo;t work.' +
+					'</p>' +
+					'<footer>&mdash; Thomas Edison</footer>' +
+				'</blockquote>'
+			)
+		}
+
+		theme.quoteLoading = function() {
+			return (
+				'<blockquote>' +
+					'<p>' +
+						'Problem is (follow me closely here, the science is pretty complicated), ' +
+						'if I cut a hole in the Hab, the air won&rsquo;t stay inside anymore.' +
+					'</p>' +
+					'<footer>&mdash; Andy Weir, <i>The Martian</i></footer>' +
+				'</blockquote>'
+			)
+		}
+
+
+		// Actions. Initiated by a control state or by
+		// a user event
+		const actions = window.actions = { }
+
+		actions.initialize = function() {
+			actions.load()
+		}
+
+		actions.load = function() {
+			var data = { loading: true }
+			model.present(data)
+
+			var httpRequest = new XMLHttpRequest()
+			httpRequest.addEventListener(
+				'load',
+				function() {
+					if (httpRequest.status === 200) {
+						let response = JSON.parse(httpRequest.responseText)
+						let data = {
+							people: response.people
+						}
+						model.present(data)
+					} else {
+						let data = {
+							error: true,
+							errorMessage: 'Received an unexpected ' + httpRequest.status + ' status.'
+						}
+						model.present(data)
+					}
+				}
+			)
+
+			httpRequest.addEventListener(
+				'error',
+				function() {
+					const data = {
+						error: true,
+						errorMessage: 'Unable to initiate the HTTP request'
+					}
+					model.present(data)
+				}
+			)
+
+			setTimeout(
+				function() {
+					httpRequest.open('GET', '/example.json', true)
+					httpRequest.send()
+				},
+				3000
+			)
+
+			return false
+		}
+
+
+		actions.initialize()
+	})()
+	</script>
+</body>
+</html> 
